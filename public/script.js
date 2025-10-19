@@ -94,6 +94,8 @@ class FileUploader {
         
         this.selectedFiles = imageFiles;
         this.showPreview();
+        // 選択・貼り付け・D&D直後に即時アップロード
+        this.uploadFilesSequential(this.selectedFiles);
     }
 
     /**
@@ -137,37 +139,71 @@ class FileUploader {
      */
     async uploadFiles() {
         if (this.selectedFiles.length === 0) return;
+        await this.uploadFilesSequential(this.selectedFiles);
+    }
+
+    /**
+     * 1ファイルをサーバーへアップロードし、生成URLを返す
+     */
+    async uploadSingleFile(file) {
+        const formData = new FormData();
+        formData.append('image', file);
+
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'アップロードに失敗しました');
+        }
+
+        // 履歴反映と行ハイライト
+        this.addToLinkHistory(result.url);
+        this.highlightLinkHistory();
+
+        // 各成功時に即コピー
+        try {
+            await navigator.clipboard.writeText(result.url);
+        } catch (e) {
+            console.error('自動コピーに失敗しました:', e);
+        }
+
+        return result.url;
+    }
+
+    /**
+     * 複数ファイルを順次アップロードし、最後に全リンクを[]で囲って改行区切りで再コピー
+     */
+    async uploadFilesSequential(files) {
+        if (!files || files.length === 0) return;
 
         this.uploadBtn.disabled = true;
+        const originalBtnText = this.uploadBtn.textContent;
         this.uploadBtn.textContent = 'アップロード中...';
 
+        const uploadedUrls = [];
         try {
-            const formData = new FormData();
-            this.selectedFiles.forEach(file => {
-                formData.append('image', file);
-            });
+            for (const file of files) {
+                const url = await this.uploadSingleFile(file);
+                uploadedUrls.push(url);
+            }
 
-            const response = await fetch('/api/upload', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await response.json();
-
-            if (result.success) {
-                this.addToLinkHistory(result.url);
-                this.cancelUpload();
-                // アップロード完了時のハイライト表示
-                this.highlightLinkHistory();
-            } else {
-                alert('アップロードに失敗しました: ' + result.error);
+            // すべて完了後にまとめて再コピー
+            const combined = uploadedUrls.map(u => `[${u}]`).join('\n');
+            try {
+                await navigator.clipboard.writeText(combined);
+            } catch (e) {
+                console.error('まとめコピーに失敗しました:', e);
             }
         } catch (error) {
             console.error('アップロードエラー:', error);
             alert('アップロードに失敗しました');
         } finally {
             this.uploadBtn.disabled = false;
-            this.uploadBtn.textContent = 'アップロード';
+            this.uploadBtn.textContent = originalBtnText;
+            this.cancelUpload();
         }
     }
 
