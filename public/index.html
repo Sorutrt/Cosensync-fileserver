@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cosensync Fileserver</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Cosensync Fileserver</h1>
+            <p>画像ファイルをアップロードしてリンクを生成</p>
+        </header>
+
+        <main>
+            <!-- アップロードエリア -->
+            <div class="upload-section">
+                <div id="dropZone" class="drop-zone">
+                    <div class="drop-zone-content">
+                        <div class="upload-icon">📁</div>
+                        <p>画像ファイルをドラッグ&ドロップ</p>
+                        <p>または</p>
+                        <button id="fileSelectBtn" class="file-select-btn">ファイルを選択</button>
+                        <input type="file" id="fileInput" accept="image/*" multiple style="display: none;">
+                    </div>
+                </div>
+
+                <!-- プレビューエリア -->
+                <div id="previewArea" class="preview-area" style="display: none;">
+                    <h3>プレビュー</h3>
+                    <div id="previewImages"></div>
+                    <button id="uploadBtn" class="upload-btn">アップロード</button>
+                    <button id="cancelBtn" class="cancel-btn">キャンセル</button>
+                </div>
+            </div>
+
+            <!-- リンク履歴 -->
+            <div class="history-section">
+                <h3>生成されたリンク</h3>
+                <div id="linkHistory" class="link-history">
+                    <p class="no-links">まだリンクが生成されていません</p>
+                </div>
+            </div>
+
+            <!-- GC機能 -->
+            <div class="gc-section">
+                <h3>ガベージコレクション</h3>
+                <p>CosenseのバックアップJSONファイルをアップロードして不要なファイルを削除</p>
+                <div class="gc-upload">
+                    <input type="file" id="gcFileInput" accept=".json" style="display: none;">
+                    <button id="gcSelectBtn" class="gc-select-btn">バックアップファイルを選択</button>
+                    <button id="gcExecuteBtn" class="gc-execute-btn" style="display: none;">GC実行</button>
+                </div>
+                <div id="gcResult" class="gc-result" style="display: none;"></div>
+            </div>
+        </main>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+

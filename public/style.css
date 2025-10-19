@@ -1,0 +1,324 @@
+/* リセットCSS */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    line-height: 1.6;
+    color: #333;
+    background-color: #f5f5f5;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 40px;
+}
+
+header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+header p {
+    color: #7f8c8d;
+}
+
+/* アップロードエリア */
+.upload-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.drop-zone {
+    border: 3px dashed #bdc3c7;
+    border-radius: 12px;
+    padding: 60px 20px;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.drop-zone.dragover {
+    border-color: #3498db;
+    background-color: #ecf0f1;
+}
+
+.drop-zone-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 15px;
+}
+
+.upload-icon {
+    font-size: 48px;
+    color: #bdc3c7;
+}
+
+.file-select-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s ease;
+}
+
+.file-select-btn:hover {
+    background: #2980b9;
+}
+
+/* プレビューエリア */
+.preview-area {
+    margin-top: 30px;
+    padding-top: 30px;
+    border-top: 1px solid #ecf0f1;
+}
+
+.preview-area h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+#previewImages {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.preview-image {
+    position: relative;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preview-image img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+}
+
+.preview-image .filename {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 5px;
+    font-size: 12px;
+    text-align: center;
+}
+
+.upload-btn, .cancel-btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-right: 10px;
+}
+
+.upload-btn {
+    background: #27ae60;
+    color: white;
+}
+
+.upload-btn:hover {
+    background: #229954;
+}
+
+.cancel-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.cancel-btn:hover {
+    background: #c0392b;
+}
+
+/* リンク履歴 */
+.history-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 30px;
+}
+
+.history-section h3 {
+    margin-bottom: 20px;
+    color: #2c3e50;
+}
+
+.link-history {
+    min-height: 100px;
+}
+
+.no-links {
+    color: #7f8c8d;
+    text-align: center;
+    padding: 40px;
+    font-style: italic;
+}
+
+.link-item {
+    display: flex;
+    align-items: center;
+    padding: 15px;
+    border: 1px solid #ecf0f1;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.link-item:hover {
+    background-color: #f8f9fa;
+    border-color: #3498db;
+}
+
+.link-item.selected {
+    background-color: #e3f2fd;
+    border-color: #2196f3;
+}
+
+.link-url {
+    flex: 1;
+    font-family: monospace;
+    font-size: 14px;
+    color: #2c3e50;
+    word-break: break-all;
+    margin-right: 15px;
+}
+
+.copy-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: background-color 0.3s ease;
+}
+
+.copy-btn:hover {
+    background: #2980b9;
+}
+
+.copy-btn.copied {
+    background: #27ae60;
+}
+
+/* GC機能 */
+.gc-section {
+    background: white;
+    border-radius: 12px;
+    padding: 30px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.gc-section h3 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+}
+
+.gc-section p {
+    color: #7f8c8d;
+    margin-bottom: 20px;
+}
+
+.gc-upload {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.gc-select-btn, .gc-execute-btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.gc-select-btn {
+    background: #f39c12;
+    color: white;
+}
+
+.gc-select-btn:hover {
+    background: #e67e22;
+}
+
+.gc-execute-btn {
+    background: #e74c3c;
+    color: white;
+}
+
+.gc-execute-btn:hover {
+    background: #c0392b;
+}
+
+.gc-result {
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 15px;
+}
+
+.gc-result.success {
+    background: #d5f4e6;
+    border: 1px solid #27ae60;
+    color: #27ae60;
+}
+
+.gc-result.error {
+    background: #fadbd8;
+    border: 1px solid #e74c3c;
+    color: #e74c3c;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+    .container {
+        padding: 15px;
+    }
+    
+    .drop-zone {
+        padding: 40px 15px;
+    }
+    
+    .upload-section, .history-section, .gc-section {
+        padding: 20px;
+    }
+    
+    .link-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .link-url {
+        margin-right: 0;
+        margin-bottom: 10px;
+    }
+}
+

@@ -1,3 +1,6 @@
-node_modules
-
-cosense-backup-example.json
+node_modules/
+dist/
+uploads/
+.env
+*.log
+.DS_Store

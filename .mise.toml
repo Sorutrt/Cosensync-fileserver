@@ -1,0 +1,6 @@
+[tools]
+nodejs = "22.20.0"
+
+[settings]
+legacy_version_file = true
+experimental = true
