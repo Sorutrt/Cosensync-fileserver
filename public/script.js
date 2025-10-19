@@ -194,19 +194,23 @@ class FileUploader {
     }
 
     /**
-     * リンク履歴エリアをハイライト表示
+     * 最新のリンク行をハイライト表示
      */
     highlightLinkHistory() {
-        const historySection = document.querySelector('.history-section');
-        historySection.classList.add('highlight');
-        
-        // ハイライトを自動でスクロール
-        historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        
-        // 3秒後にハイライトを解除
-        setTimeout(() => {
-            historySection.classList.remove('highlight');
-        }, 3000);
+        // 最新のリンク行（最初の行）をハイライト
+        const firstLinkItem = document.querySelector('.link-item');
+        if (firstLinkItem) {
+            firstLinkItem.classList.add('new-link-highlight');
+            
+            // リンク履歴エリアを自動でスクロール
+            const historySection = document.querySelector('.history-section');
+            historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            
+            // 3秒後にハイライトを解除
+            setTimeout(() => {
+                firstLinkItem.classList.remove('new-link-highlight');
+            }, 3000);
+        }
     }
 
     /**

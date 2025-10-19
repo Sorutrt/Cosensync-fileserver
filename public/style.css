@@ -163,8 +163,8 @@ header p {
     transition: all 0.5s ease;
 }
 
-/* ハイライト効果 */
-.history-section.highlight {
+/* 個別リンク行のハイライト効果 */
+.link-item.new-link-highlight {
     background: #e8f5e8;
     border: 2px solid #27ae60;
     box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
@@ -250,9 +250,12 @@ header p {
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    transition: all 0.3s ease;
     min-width: 60px;
     text-align: center;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .copy-btn:hover {
