@@ -157,7 +157,8 @@ class FileUploader {
             if (result.success) {
                 this.addToLinkHistory(result.url);
                 this.cancelUpload();
-                alert('アップロードが完了しました！');
+                // アップロード完了時のハイライト表示
+                this.highlightLinkHistory();
             } else {
                 alert('アップロードに失敗しました: ' + result.error);
             }
@@ -190,6 +191,22 @@ class FileUploader {
         });
         this.saveLinkHistory(history);
         this.renderLinkHistory();
+    }
+
+    /**
+     * リンク履歴エリアをハイライト表示
+     */
+    highlightLinkHistory() {
+        const historySection = document.querySelector('.history-section');
+        historySection.classList.add('highlight');
+        
+        // ハイライトを自動でスクロール
+        historySection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        
+        // 3秒後にハイライトを解除
+        setTimeout(() => {
+            historySection.classList.remove('highlight');
+        }, 3000);
     }
 
     /**
@@ -249,7 +266,7 @@ class FileUploader {
     async copyToClipboard(url, button) {
         try {
             await navigator.clipboard.writeText(url);
-            button.textContent = 'コピー済み';
+            button.innerHTML = '✓';
             button.classList.add('copied');
             
             setTimeout(() => {

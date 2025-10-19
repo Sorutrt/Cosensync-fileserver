@@ -160,6 +160,15 @@ header p {
     padding: 30px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
     margin-bottom: 30px;
+    transition: all 0.5s ease;
+}
+
+/* ハイライト効果 */
+.history-section.highlight {
+    background: #e8f5e8;
+    border: 2px solid #27ae60;
+    box-shadow: 0 4px 20px rgba(39, 174, 96, 0.3);
+    transform: scale(1.02);
 }
 
 .history-section h3 {
@@ -169,6 +178,31 @@ header p {
 
 .link-history {
     min-height: 100px;
+    max-height: 400px;
+    overflow-y: auto;
+    border: 1px solid #ecf0f1;
+    border-radius: 8px;
+    padding: 10px;
+    background: #fafafa;
+}
+
+/* スクロールバーのスタイリング */
+.link-history::-webkit-scrollbar {
+    width: 8px;
+}
+
+.link-history::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.link-history::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.link-history::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
 
 .no-links {
@@ -216,7 +250,9 @@ header p {
     border-radius: 4px;
     cursor: pointer;
     font-size: 12px;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
+    min-width: 60px;
+    text-align: center;
 }
 
 .copy-btn:hover {
@@ -225,6 +261,9 @@ header p {
 
 .copy-btn.copied {
     background: #27ae60;
+    color: white;
+    font-size: 16px;
+    font-weight: bold;
 }
 
 /* GC機能 */
