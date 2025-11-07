@@ -4,23 +4,33 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { extractFileNamesFromBackup, identifyUnnecessaryFiles } from './file-utils';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
 
-// ミドルウェア設定
+/**
+ * ミドルウェア設定
+ * CORS、JSON解析、静的ファイル配信を有効化
+ */
 app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 app.use('/uploads', express.static('uploads'));
 
-// uploadsディレクトリが存在しない場合は作成
+/**
+ * アップロードディレクトリの初期化
+ * 存在しない場合は自動的に作成する
+ */
 const uploadsDir = path.join(__dirname, '../uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
-// Multer設定 - UUIDファイル名で保存
+/**
+ * Multer設定 - ファイルアップロード処理
+ * ファイル名はUUID形式で保存し、元の拡張子を保持する
+ */
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, uploadsDir);
@@ -33,6 +43,10 @@ const storage = multer.diskStorage({
   }
 });
 
+/**
+ * Multerインスタンス - アップロード設定
+ * 画像ファイルのみを許可し、それ以外はエラーとする
+ */
 const upload = multer({ 
   storage: storage,
   fileFilter: (req, file, cb) => {
@@ -46,17 +60,26 @@ const upload = multer({
 });
 
 /**
- * ファイルアップロード処理
+ * ファイルアップロードAPIエンドポイント
  * 画像ファイルをUUIDファイル名で保存し、アクセス用のURLを返す
+ * 
+ * @route POST /api/upload
+ * @param {File} image - アップロードする画像ファイル（multipart/form-data）
+ * @returns {Object} success - 成功フラグ、url - アクセス用URL、filename - 保存されたファイル名
  */
 app.post('/api/upload', upload.single('image'), (req, res) => {
   try {
+    // ファイルの存在確認
     if (!req.file) {
+      console.warn('ファイルアップロードリクエストにファイルが含まれていません');
       return res.status(400).json({ error: 'ファイルが選択されていません' });
     }
 
+    // アクセス用URLの生成
     const fileUrl = `/uploads/${req.file.filename}`;
     const fullUrl = `${req.protocol}://${req.get('host')}${fileUrl}`;
+    
+    console.log(`ファイルアップロード成功: ${req.file.filename}`);
     
     res.json({ 
       success: true, 
@@ -65,63 +88,62 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
     });
   } catch (error) {
     console.error('アップロードエラー:', error);
-    res.status(500).json({ error: 'アップロードに失敗しました' });
+    res.status(500).json({ 
+      error: 'アップロードに失敗しました',
+      details: error instanceof Error ? error.message : '不明なエラー'
+    });
   }
 });
 
 /**
- * GC（ガベージコレクション）処理
- * CosenseのバックアップJSONを解析し、不要なファイルを削除
+ * GC（ガベージコレクション）APIエンドポイント
+ * CosenseのバックアップJSONを解析し、参照されていないファイルを削除する
+ * 
+ * @route POST /api/gc
+ * @param {File} backup - CosenseのバックアップJSONファイル（multipart/form-data）
+ * @returns {Object} success - 成功フラグ、deletedFiles - 削除されたファイル名の配列、deletedCount - 削除数
  */
 app.post('/api/gc', upload.single('backup'), async (req, res) => {
+  let backupPath: string | undefined;
+  
   try {
+    // バックアップファイルの存在確認
     if (!req.file) {
+      console.warn('GCリクエストにバックアップファイルが含まれていません');
       return res.status(400).json({ error: 'バックアップファイルが選択されていません' });
     }
 
-    // JSONファイルを読み込み
-    const backupPath = req.file.path;
-    const backupData = JSON.parse(fs.readFileSync(backupPath, 'utf8'));
+    backupPath = req.file.path;
     
-    // 必要なファイル名を収集
-    const requiredFiles = new Set<string>();
-    
-    if (backupData.pages && Array.isArray(backupData.pages)) {
-      backupData.pages.forEach((page: any) => {
-        if (page.lines && Array.isArray(page.lines)) {
-          page.lines.forEach((line: any) => {
-            if (line.text && typeof line.text === 'string') {
-              // テキスト内からファイル名を抽出（URL形式やファイル名パターンを検索）
-              const text = line.text;
-              // 簡単なファイル名パターンマッチング
-              const fileMatches = text.match(/[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-zA-Z0-9]+/g);
-              if (fileMatches) {
-                fileMatches.forEach((match: string) => requiredFiles.add(match));
-              }
-            }
-          });
-        }
+    // JSONファイルを読み込みとパース
+    let backupData;
+    try {
+      const backupContent = fs.readFileSync(backupPath, 'utf8');
+      backupData = JSON.parse(backupContent);
+    } catch (parseError) {
+      console.error('バックアップJSONのパースに失敗:', parseError);
+      return res.status(400).json({ 
+        error: 'バックアップファイルの形式が不正です',
+        details: parseError instanceof Error ? parseError.message : '不明なエラー'
       });
     }
+    
+    // 必要なファイル名を収集（モジュール化された関数を使用）
+    const requiredFiles = extractFileNamesFromBackup(backupData);
+    console.log(`必要なファイル数: ${requiredFiles.size}`);
 
     // uploadsディレクトリ内のファイルをチェック
     const uploadedFiles = fs.readdirSync(uploadsDir);
-    const deletedFiles: string[] = [];
+    console.log(`アップロード済みファイル数: ${uploadedFiles.length}`);
     
-    uploadedFiles.forEach(file => {
-      if (!requiredFiles.has(file)) {
-        const filePath = path.join(uploadsDir, file);
-        try {
-          fs.unlinkSync(filePath);
-          deletedFiles.push(file);
-        } catch (error) {
-          console.error(`ファイル削除エラー: ${file}`, error);
-        }
-      }
-    });
+    // 不要なファイルを特定（モジュール化された関数を使用）
+    const unnecessaryFiles = identifyUnnecessaryFiles(uploadedFiles, requiredFiles);
+    console.log(`削除対象ファイル数: ${unnecessaryFiles.length}`);
+    
+    // 不要なファイルを削除
+    const deletedFiles = deleteFiles(uploadsDir, unnecessaryFiles);
 
-    // バックアップファイルも削除
-    fs.unlinkSync(backupPath);
+    console.log(`GC処理完了: ${deletedFiles.length}個のファイルを削除しました`);
 
     res.json({ 
       success: true, 
@@ -130,11 +152,50 @@ app.post('/api/gc', upload.single('backup'), async (req, res) => {
     });
   } catch (error) {
     console.error('GC処理エラー:', error);
-    res.status(500).json({ error: 'GC処理に失敗しました' });
+    res.status(500).json({ 
+      error: 'GC処理に失敗しました',
+      details: error instanceof Error ? error.message : '不明なエラー'
+    });
+  } finally {
+    // バックアップファイルのクリーンアップ（成功・失敗に関わらず）
+    if (backupPath && fs.existsSync(backupPath)) {
+      try {
+        fs.unlinkSync(backupPath);
+        console.log('バックアップファイルを削除しました');
+      } catch (cleanupError) {
+        console.error('バックアップファイルの削除に失敗:', cleanupError);
+      }
+    }
   }
 });
 
-// サーバー起動
+/**
+ * 指定されたファイルリストを削除する
+ * 
+ * @param directory - ファイルが存在するディレクトリ
+ * @param fileNames - 削除するファイル名の配列
+ * @returns 実際に削除されたファイル名の配列
+ */
+function deleteFiles(directory: string, fileNames: string[]): string[] {
+  const deletedFiles: string[] = [];
+  
+  fileNames.forEach(file => {
+    const filePath = path.join(directory, file);
+    try {
+      fs.unlinkSync(filePath);
+      deletedFiles.push(file);
+    } catch (error) {
+      console.error(`ファイル削除エラー: ${file}`, error);
+    }
+  });
+  
+  return deletedFiles;
+}
+
+/**
+ * サーバー起動
+ * 指定されたポートでExpressサーバーを起動する
+ */
 app.listen(PORT, () => {
   console.log(`Cosensync-fileserver がポート ${PORT} で起動しました`);
   console.log(`http://localhost:${PORT} でアクセスできます`);

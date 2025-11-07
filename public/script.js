@@ -84,11 +84,13 @@ class FileUploader {
 
     /**
      * ファイル選択処理
+     * 画像ファイルのみを受け付け、即座にアップロードを開始する
+     * @param {FileList|Array} files - 選択されたファイルのリスト
      */
     handleFileSelect(files) {
         const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
         if (imageFiles.length === 0) {
-            alert('画像ファイルを選択してください');
+            this.showError('画像ファイルを選択してください');
             return;
         }
         
@@ -100,6 +102,8 @@ class FileUploader {
 
     /**
      * クリップボード貼り付け処理
+     * クリップボードから画像データを取得してアップロードする
+     * @param {ClipboardEvent} e - クリップボードイベント
      */
     handlePaste(e) {
         const items = Array.from(e.clipboardData.items);
@@ -113,6 +117,7 @@ class FileUploader {
 
     /**
      * プレビュー表示
+     * 選択された画像のサムネイルを表示する
      */
     showPreview() {
         this.previewImages.innerHTML = '';
@@ -127,6 +132,10 @@ class FileUploader {
                     <div class="filename">${file.name}</div>
                 `;
                 this.previewImages.appendChild(previewDiv);
+            };
+            reader.onerror = () => {
+                console.error(`ファイル読み込みエラー: ${file.name}`);
+                this.showError(`ファイルの読み込みに失敗しました: ${file.name}`);
             };
             reader.readAsDataURL(file);
         });
@@ -199,7 +208,7 @@ class FileUploader {
             }
         } catch (error) {
             console.error('アップロードエラー:', error);
-            alert('アップロードに失敗しました');
+            this.showError('ファイルのアップロードに失敗しました。もう一度お試しください。');
         } finally {
             this.uploadBtn.disabled = false;
             this.uploadBtn.textContent = originalBtnText;
@@ -302,6 +311,9 @@ class FileUploader {
 
     /**
      * クリップボードにコピー
+     * URLをクリップボードにコピーし、ボタンの表示を更新する
+     * @param {string} url - コピーするURL
+     * @param {HTMLElement} button - コピーボタン要素
      */
     async copyToClipboard(url, button) {
         try {
@@ -315,8 +327,18 @@ class FileUploader {
             }, 2000);
         } catch (error) {
             console.error('コピーに失敗しました:', error);
-            alert('コピーに失敗しました');
+            this.showError('クリップボードへのコピーに失敗しました');
         }
+    }
+
+    /**
+     * エラーメッセージを表示する
+     * @param {string} message - 表示するエラーメッセージ
+     */
+    showError(message) {
+        // 簡易的なエラー表示（将来的にはより洗練されたUIにできる）
+        alert(message);
+        console.error(message);
     }
 
     /**
@@ -364,7 +386,7 @@ class FileUploader {
         } catch (error) {
             console.error('GC処理エラー:', error);
             this.gcResult.className = 'gc-result error';
-            this.gcResult.innerHTML = '<strong>GC処理に失敗しました</strong>';
+            this.gcResult.innerHTML = '<strong>GC処理に失敗しました</strong><br>詳細: ' + (error.message || '不明なエラー');
         } finally {
             this.gcResult.style.display = 'block';
             this.gcExecuteBtn.disabled = false;
