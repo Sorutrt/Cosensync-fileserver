@@ -135,6 +135,26 @@ test.describe('ガベージコレクションAPI', () => {
     expect(result).toHaveProperty('error', 'バックアップファイルの形式が不正です');
   });
 
+  test('異常系：HTMLファイルでGC実行', async ({ request }) => {
+    const html = Buffer.from('<!doctype html><html><body>not json</body></html>');
+
+    const response = await request.post(`${BASE_URL}/api/gc`, {
+      multipart: {
+        backup: {
+          name: 'backup.json',
+          mimeType: 'application/json',
+          buffer: html
+        }
+      }
+    });
+
+    expect(response.status()).toBe(400);
+
+    const result = await response.json();
+    expect(result).toHaveProperty('error', 'バックアップファイルの形式が不正です');
+    expect(result.details).toContain('JSONではなくHTML');
+  });
+
   test('正常系：すべてのファイルが必要な場合のGC', async ({ request }) => {
     // バックアップに含まれるファイル名のファイルを作成
     const requiredFiles = [

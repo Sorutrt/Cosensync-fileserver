@@ -370,6 +370,12 @@ class FileUploader {
                 body: formData
             });
 
+            const contentType = response.headers.get('content-type') || '';
+            if (!contentType.includes('application/json')) {
+                const text = await response.text();
+                throw new Error(`APIがJSONではないレスポンスを返しました: ${text.slice(0, 80)}`);
+            }
+
             const result = await response.json();
 
             if (result.success) {
@@ -381,7 +387,8 @@ class FileUploader {
                 `;
             } else {
                 this.gcResult.className = 'gc-result error';
-                this.gcResult.innerHTML = `<strong>GC処理に失敗しました:</strong> ${result.error}`;
+                const details = result.details ? `<br>詳細: ${result.details}` : '';
+                this.gcResult.innerHTML = `<strong>GC処理に失敗しました:</strong> ${result.error}${details}`;
             }
         } catch (error) {
             console.error('GC処理エラー:', error);

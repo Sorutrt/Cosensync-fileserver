@@ -160,6 +160,12 @@ app.post('/api/gc', (req, res) => {
       let backupData;
       try {
         const backupContent = fs.readFileSync(backupPath, 'utf8');
+        if (backupContent.trimStart().startsWith('<')) {
+          return res.status(400).json({
+            error: 'バックアップファイルの形式が不正です',
+            details: 'JSONではなくHTMLのような内容です。CosenseのバックアップJSONファイルを選択してください'
+          });
+        }
         backupData = JSON.parse(backupContent);
       } catch (parseError) {
         console.error('バックアップJSONのパースに失敗:', parseError);
