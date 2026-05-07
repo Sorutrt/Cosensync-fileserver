@@ -10,6 +10,16 @@ import fs from 'fs';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 5050}`;
 const TEST_UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const BACKUP_FILE_PATTERN = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-zA-Z0-9]+/g;
+
+function getBackupData(): Buffer {
+  return fs.readFileSync(getCosenseBackupPath());
+}
+
+function getReferencedFilesFromBackup(): string[] {
+  const backupText = getBackupData().toString('utf8');
+  return [...new Set(backupText.match(BACKUP_FILE_PATTERN) || [])];
+}
 
 test.describe('ガベージコレクションAPI', () => {
 
@@ -25,9 +35,11 @@ test.describe('ガベージコレクションAPI', () => {
 
   test('正常系：Cosenseバックアップファイルを使用したGC', async ({ request }) => {
     // テスト用のファイルをいくつか作成
-    const requiredFile = '12345678-1234-1234-1234-123456789abc.jpg';
+    const [requiredFile] = getReferencedFilesFromBackup();
     const unnecessaryFile1 = '11111111-1111-1111-1111-111111111111.png';
     const unnecessaryFile2 = '22222222-2222-2222-2222-222222222222.gif';
+
+    expect(requiredFile).toBeTruthy();
 
     // 必要なファイルを作成
     fs.writeFileSync(
@@ -51,7 +63,7 @@ test.describe('ガベージコレクションAPI', () => {
     expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile2))).toBe(true);
 
     // CosenseバックアップファイルをアップロードしてGCを実行
-    const backupData = fs.readFileSync(getCosenseBackupPath());
+    const backupData = getBackupData();
     const response = await request.post(`${BASE_URL}/api/gc`, {
       multipart: {
         backup: {
@@ -83,7 +95,7 @@ test.describe('ガベージコレクションAPI', () => {
   test('正常系：空のuploadsディレクトリでのGC', async ({ request }) => {
     // uploadsディレクトリは空の状態
 
-    const backupData = fs.readFileSync(getCosenseBackupPath());
+    const backupData = getBackupData();
     const response = await request.post(`${BASE_URL}/api/gc`, {
       multipart: {
         backup: {
@@ -157,11 +169,8 @@ test.describe('ガベージコレクションAPI', () => {
 
   test('正常系：すべてのファイルが必要な場合のGC', async ({ request }) => {
     // バックアップに含まれるファイル名のファイルを作成
-    const requiredFiles = [
-      '12345678-1234-1234-1234-123456789abc.jpg',
-      '87654321-4321-4321-4321-cba987654321.png',
-      'abcdef12-3456-7890-abcd-ef1234567890.gif'
-    ];
+    const requiredFiles = getReferencedFilesFromBackup();
+    expect(requiredFiles.length).toBeGreaterThan(0);
 
     for (const filename of requiredFiles) {
       fs.writeFileSync(
@@ -175,7 +184,7 @@ test.describe('ガベージコレクションAPI', () => {
       expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, filename))).toBe(true);
     }
 
-    const backupData = fs.readFileSync(getCosenseBackupPath());
+    const backupData = getBackupData();
     const response = await request.post(`${BASE_URL}/api/gc`, {
       multipart: {
         backup: {
@@ -200,7 +209,7 @@ test.describe('ガベージコレクションAPI', () => {
   });
 
   test('正常系：バックアップファイルの自動削除', async ({ request }) => {
-    const backupData = fs.readFileSync(getCosenseBackupPath());
+    const backupData = getBackupData();
     const response = await request.post(`${BASE_URL}/api/gc`, {
       multipart: {
         backup: {
