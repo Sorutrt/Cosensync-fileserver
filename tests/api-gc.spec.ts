@@ -8,11 +8,11 @@ import { createTestImage, cleanupTestDirectory, ensureTestDirectory, getCosenseB
 import path from 'path';
 import fs from 'fs';
 
-const BASE_URL = 'http://localhost:5050';
+const BASE_URL = `http://localhost:${process.env.PORT || 5050}`;
 const TEST_UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
 
 test.describe('ガベージコレクションAPI', () => {
-  
+
   test.beforeEach(async () => {
     // テスト前にuploadsディレクトリを準備
     ensureTestDirectory(TEST_UPLOADS_DIR);
@@ -52,16 +52,19 @@ test.describe('ガベージコレクションAPI', () => {
 
     // CosenseバックアップファイルをアップロードしてGCを実行
     const backupData = fs.readFileSync(getCosenseBackupPath());
-    const formData = new FormData();
-    formData.append('backup', new Blob([backupData], { type: 'application/json' }), 'backup.json');
-
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {
+        backup: {
+          name: 'backup.json',
+          mimeType: 'application/json',
+          buffer: backupData
+        }
+      }
     });
 
     // レスポンスの検証
     expect(response.status()).toBe(200);
-    
+
     const result = await response.json();
     expect(result).toHaveProperty('success', true);
     expect(result).toHaveProperty('deletedFiles');
@@ -70,31 +73,29 @@ test.describe('ガベージコレクションAPI', () => {
 
     // 必要なファイルは残り、不要なファイルは削除されていることを確認
     expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, requiredFile))).toBe(true);
-    
-    // 不要なファイルは削除されているはず（バックアップに含まれていないため）
-    const unnecessaryFilesExist = 
-      fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile1)) ||
-      fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile2));
-    
-    // GC結果に不要なファイルが含まれていることを確認
-    if (result.deletedCount > 0) {
-      expect(result.deletedFiles.length).toBeGreaterThan(0);
-    }
+
+    expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile1))).toBe(false);
+    expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile2))).toBe(false);
+    expect(result.deletedCount).toBe(2);
+    expect(result.deletedFiles).toEqual(expect.arrayContaining([unnecessaryFile1, unnecessaryFile2]));
   });
 
   test('正常系：空のuploadsディレクトリでのGC', async ({ request }) => {
     // uploadsディレクトリは空の状態
 
     const backupData = fs.readFileSync(getCosenseBackupPath());
-    const formData = new FormData();
-    formData.append('backup', new Blob([backupData], { type: 'application/json' }), 'backup.json');
-
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {
+        backup: {
+          name: 'backup.json',
+          mimeType: 'application/json',
+          buffer: backupData
+        }
+      }
     });
 
     expect(response.status()).toBe(200);
-    
+
     const result = await response.json();
     expect(result.success).toBe(true);
     expect(result.deletedCount).toBe(0);
@@ -110,26 +111,28 @@ test.describe('ガベージコレクションAPI', () => {
     });
 
     expect(response.status()).toBe(400);
-    
+
     const result = await response.json();
     expect(result).toHaveProperty('error', 'バックアップファイルが選択されていません');
   });
 
   test('異常系：無効なJSONファイルでGC実行', async ({ request }) => {
     const invalidJson = Buffer.from('invalid json content');
-    
-    const formData = new FormData();
-    formData.append('backup', new Blob([invalidJson], { type: 'application/json' }), 'invalid.json');
 
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {
+        backup: {
+          name: 'invalid.json',
+          mimeType: 'application/json',
+          buffer: invalidJson
+        }
+      }
     });
 
-    expect(response.status()).toBe(500);
-    
+    expect(response.status()).toBe(400);
+
     const result = await response.json();
-    expect(result).toHaveProperty('error');
-    expect(result.error).toContain('GC処理に失敗しました');
+    expect(result).toHaveProperty('error', 'バックアップファイルの形式が不正です');
   });
 
   test('正常系：すべてのファイルが必要な場合のGC', async ({ request }) => {
@@ -153,15 +156,18 @@ test.describe('ガベージコレクションAPI', () => {
     }
 
     const backupData = fs.readFileSync(getCosenseBackupPath());
-    const formData = new FormData();
-    formData.append('backup', new Blob([backupData], { type: 'application/json' }), 'backup.json');
-
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {
+        backup: {
+          name: 'backup.json',
+          mimeType: 'application/json',
+          buffer: backupData
+        }
+      }
     });
 
     expect(response.status()).toBe(200);
-    
+
     const result = await response.json();
     expect(result.success).toBe(true);
     expect(result.deletedCount).toBe(0);
@@ -175,15 +181,18 @@ test.describe('ガベージコレクションAPI', () => {
 
   test('正常系：バックアップファイルの自動削除', async ({ request }) => {
     const backupData = fs.readFileSync(getCosenseBackupPath());
-    const formData = new FormData();
-    formData.append('backup', new Blob([backupData], { type: 'application/json' }), 'test-backup.json');
-
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {
+        backup: {
+          name: 'test-backup.json',
+          mimeType: 'application/json',
+          buffer: backupData
+        }
+      }
     });
 
     expect(response.status()).toBe(200);
-    
+
     const result = await response.json();
     expect(result.success).toBe(true);
 
