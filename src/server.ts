@@ -4,7 +4,7 @@ import cors from 'cors';
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
-import { extractFileNamesFromBackup, identifyUnnecessaryFiles } from './file-utils';
+import { extractFileNamesFromBackup, identifyUnnecessaryFiles, isCosenseBackup } from './file-utils';
 
 const app = express();
 const PORT = process.env.PORT || 5050;
@@ -172,6 +172,13 @@ app.post('/api/gc', (req, res) => {
         return res.status(400).json({
           error: 'バックアップファイルの形式が不正です',
           details: parseError instanceof Error ? parseError.message : '不明なエラー'
+        });
+      }
+
+      if (!isCosenseBackup(backupData)) {
+        return res.status(400).json({
+          error: 'Cosenseバックアップの構造が不正です',
+          details: 'pages配列と各ページのlines配列を確認できませんでした'
         });
       }
 

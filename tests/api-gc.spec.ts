@@ -147,6 +147,28 @@ test.describe('ガベージコレクションAPI', () => {
     expect(result).toHaveProperty('error', 'バックアップファイルの形式が不正です');
   });
 
+  test('異常系：CosenseバックアップではないJSONでは既存ファイルを削除しない', async ({ request }) => {
+    const existingFile = '33333333-3333-3333-3333-333333333333.png';
+    fs.writeFileSync(
+      path.join(TEST_UPLOADS_DIR, existingFile),
+      createTestImage(existingFile)
+    );
+
+    const response = await request.post(`${BASE_URL}/api/gc`, {
+      multipart: {
+        backup: {
+          name: 'not-cosense.json',
+          mimeType: 'application/json',
+          buffer: Buffer.from(JSON.stringify({ data: [] }))
+        }
+      }
+    });
+
+    expect(response.status()).toBe(400);
+    expect(await response.json()).toHaveProperty('error', 'Cosenseバックアップの構造が不正です');
+    expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, existingFile))).toBe(true);
+  });
+
   test('異常系：HTMLファイルでGC実行', async ({ request }) => {
     const html = Buffer.from('<!doctype html><html><body>not json</body></html>');
 

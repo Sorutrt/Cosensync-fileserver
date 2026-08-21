@@ -9,6 +9,26 @@ import { test, expect } from '@playwright/test';
 import { extractFileNamesFromBackup } from '../src/file-utils';
 
 test.describe('ファイル名抽出ユニットテスト', () => {
+  test('正常系：現在のCosenseエクスポートの文字列linesからファイル名を抽出', () => {
+    const backupData = {
+      pages: [
+        {
+          lines: [
+            'ページタイトル',
+            '[https://files.example.com/uploads/27eef554-3da7-44a9-982f-5d1030eaab7c.webp]',
+            '[https://files.example.com/uploads/5a5da179-647b-47df-8e2a-9ac448cc44c7.png]'
+          ]
+        }
+      ]
+    };
+
+    const result = extractFileNamesFromBackup(backupData);
+
+    expect(result).toEqual(new Set([
+      '27eef554-3da7-44a9-982f-5d1030eaab7c.webp',
+      '5a5da179-647b-47df-8e2a-9ac448cc44c7.png'
+    ]));
+  });
   
   test('正常系：標準的なCosenseバックアップからファイル名を抽出', () => {
     const backupData = {

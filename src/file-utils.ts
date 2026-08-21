@@ -30,13 +30,14 @@ export function extractFileNamesFromBackup(backupData: any): Set<string> {
 
     // 各行を走査
     page.lines.forEach((line: any) => {
-      // textプロパティの存在確認
-      if (!line.text || typeof line.text !== 'string') {
+      // 現在のエクスポートは文字列、旧形式はtextプロパティを持つオブジェクト
+      const text = typeof line === 'string' ? line : line?.text;
+      if (typeof text !== 'string' || !text) {
         return;
       }
 
       // テキスト内からファイル名を抽出
-      const matches = line.text.match(filePattern);
+      const matches = text.match(filePattern);
       if (matches) {
         matches.forEach((match: string) => {
           fileNames.add(match);
@@ -46,6 +47,23 @@ export function extractFileNamesFromBackup(backupData: any): Set<string> {
   });
 
   return fileNames;
+}
+
+/**
+ * GCを安全に実行できるCosenseバックアップ構造か検証する
+ */
+export function isCosenseBackup(backupData: any): boolean {
+  if (!backupData || !Array.isArray(backupData.pages)) {
+    return false;
+  }
+
+  return backupData.pages.every((page: any) =>
+    page &&
+    Array.isArray(page.lines) &&
+    page.lines.every((line: any) =>
+      typeof line === 'string' || typeof line?.text === 'string'
+    )
+  );
 }
 
 /**
