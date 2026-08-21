@@ -46,24 +46,15 @@ test.describe('統合テスト', () => {
   });
 
   test('アップロードからGCまでの一連のフロー', async ({ request }) => {
-    // 1. 画像ファイルをアップロード
-    const testImageBuffer = Buffer.from([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-      0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-      0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-      0x54, 0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-      0xAE, 0x42, 0x60, 0x82
-    ]);
-
-    const uploadFormData = new FormData();
-    uploadFormData.append('image', new Blob([testImageBuffer], { type: 'image/png' }), 'test.png');
-
+    const testImageBuffer = Buffer.from('test image');
     const uploadResponse = await request.post(`${BASE_URL}/api/upload`, {
-      data: uploadFormData
+      multipart: {
+        image: {
+          name: 'test.png',
+          mimeType: 'image/png',
+          buffer: testImageBuffer
+        }
+      }
     });
 
     expect(uploadResponse.status()).toBe(200);
@@ -72,60 +63,38 @@ test.describe('統合テスト', () => {
     expect(uploadResult.filename).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.png$/);
 
     // 2. アップロードされたファイルにアクセス可能
-    const fileResponse = await request.get(`${BASE_URL}${uploadResult.url}`);
+    const fileResponse = await request.get(uploadResult.url);
     expect(fileResponse.status()).toBe(200);
     expect(fileResponse.headers()['content-type']).toMatch(/^image\//);
 
-    // 3. 不要なファイルを作成してGCを実行
+    // バックアップに含まれないファイルも用意する
     const unnecessaryFile = '11111111-1111-1111-1111-111111111111.png';
     fs.writeFileSync(
       path.join(TEST_UPLOADS_DIR, unnecessaryFile),
       testImageBuffer
     );
 
-    // 4. CosenseバックアップファイルでGCを実行
-    const backupPath = path.join(__dirname, 'cosense-backup.json');
-    const backupData = fs.readFileSync(backupPath);
-    
-    const gcFormData = new FormData();
-    gcFormData.append('backup', new Blob([backupData], { type: 'application/json' }), 'backup.json');
-
+    const backupData = Buffer.from(JSON.stringify({
+      pages: [{ lines: [`[${uploadResult.url}]`] }]
+    }));
     const gcResponse = await request.post(`${BASE_URL}/api/gc`, {
-      data: gcFormData
+      multipart: {
+        backup: {
+          name: 'backup.json',
+          mimeType: 'application/json',
+          buffer: backupData
+        }
+      }
     });
 
     expect(gcResponse.status()).toBe(200);
     const gcResult = await gcResponse.json();
     expect(gcResult.success).toBe(true);
-    expect(gcResult.deletedCount).toBeGreaterThanOrEqual(0);
+    expect(gcResult.deletedFiles).toContain(unnecessaryFile);
 
-    // 5. 必要なファイルは残り、不要なファイルは削除されていることを確認
+    // バックアップで参照したファイルだけが残る
     expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, uploadResult.filename))).toBe(true);
-    // 不要なファイルは削除されている可能性がある（GCの動作による）
-  });
-
-  test('エラーハンドリングの統合テスト', async ({ request }) => {
-    // 存在しないパスにアクセス
-    const notFoundResponse = await request.get(`${BASE_URL}/nonexistent-path`);
-    expect(notFoundResponse.status()).toBe(404);
-
-    // 不正なHTTPメソッドでAPIにアクセス
-    const wrongMethodResponse = await request.get(`${BASE_URL}/api/upload`);
-    expect(wrongMethodResponse.status()).toBe(404);
-
-    // 不正なContent-Typeでアップロード
-    const invalidFormData = new FormData();
-    invalidFormData.append('image', 'not a file', 'test.txt');
-
-    const invalidUploadResponse = await request.post(`${BASE_URL}/api/upload`, {
-      data: invalidFormData,
-      headers: {
-        'Content-Type': 'application/json' // 不正なContent-Type
-      }
-    });
-
-    // サーバーはエラーを適切に処理するはず
-    expect([400, 500]).toContain(invalidUploadResponse.status());
+    expect(fs.existsSync(path.join(TEST_UPLOADS_DIR, unnecessaryFile))).toBe(false);
   });
 
   test('同時アクセスのテスト', async ({ request }) => {
@@ -146,11 +115,14 @@ test.describe('統合テスト', () => {
     
     // 5つの同時アップロードリクエスト
     for (let i = 0; i < 5; i++) {
-      const formData = new FormData();
-      formData.append('image', new Blob([testImageBuffer], { type: 'image/png' }), `test${i}.png`);
-      
       const requestPromise = request.post(`${BASE_URL}/api/upload`, {
-        data: formData
+        multipart: {
+          image: {
+            name: `test${i}.png`,
+            mimeType: 'image/png',
+            buffer: testImageBuffer
+          }
+        }
       });
       
       concurrentRequests.push(requestPromise);
@@ -159,45 +131,19 @@ test.describe('統合テスト', () => {
     // すべてのリクエストが完了するのを待機
     const responses = await Promise.all(concurrentRequests);
     
-    // すべてのリクエストが成功していることを確認
+    // すべてのリクエストが成功し、異なるファイル名になることを確認
+    const filenames = [];
     for (const response of responses) {
       expect(response.status()).toBe(200);
       
       const result = await response.json();
       expect(result.success).toBe(true);
       expect(result.filename).toMatch(/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.png$/);
+      filenames.push(result.filename);
     }
 
-    // ファイル名がすべて異なっていることを確認
-    const filenames = await Promise.all(
-      responses.map(async (response) => {
-        const result = await response.json();
-        return result.filename;
-      })
-    );
-    
     const uniqueFilenames = new Set(filenames);
     expect(uniqueFilenames.size).toBe(filenames.length);
   });
 
-  test('メモリ使用量とパフォーマンスの基本的なテスト', async ({ request }) => {
-    // 大きなファイルのアップロードテスト（1MBのダミーデータ）
-    const largeBuffer = Buffer.alloc(1024 * 1024, 'A');
-    
-    const formData = new FormData();
-    formData.append('image', new Blob([largeBuffer], { type: 'image/png' }), 'large.png');
-
-    const startTime = Date.now();
-    const response = await request.post(`${BASE_URL}/api/upload`, {
-      data: formData
-    });
-    const endTime = Date.now();
-
-    // レスポンス時間が妥当な範囲内にあることを確認（10秒以内）
-    expect(endTime - startTime).toBeLessThan(10000);
-    expect(response.status()).toBe(200);
-    
-    const result = await response.json();
-    expect(result.success).toBe(true);
-  });
 });

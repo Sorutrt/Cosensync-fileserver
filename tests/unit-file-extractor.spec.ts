@@ -6,7 +6,7 @@
 import { test, expect } from '@playwright/test';
 
 // テスト対象の関数をインポート
-import { extractFileNamesFromBackup } from '../src/file-utils';
+import { extractFileNamesFromBackup, identifyUnnecessaryFiles, isCosenseBackup } from '../src/file-utils';
 
 test.describe('ファイル名抽出ユニットテスト', () => {
   test('正常系：現在のCosenseエクスポートの文字列linesからファイル名を抽出', () => {
@@ -160,3 +160,21 @@ test.describe('ファイル名抽出ユニットテスト', () => {
   });
 });
 
+test.describe('GC入力検証ユニットテスト', () => {
+  test('pages配列と文字列またはtext付きlinesを持つバックアップだけを受け入れる', () => {
+    expect(isCosenseBackup({ pages: [{ lines: ['現行形式', { text: '旧形式' }] }]})).toBe(true);
+    expect(isCosenseBackup({ pages: [{ lines: [{ text: null }] }]})).toBe(false);
+    expect(isCosenseBackup({ pages: [{ lines: 'not an array' }]})).toBe(false);
+    expect(isCosenseBackup({ data: [] })).toBe(false);
+  });
+
+  test('バックアップで参照されないアップロード済みファイルだけを削除対象にする', () => {
+    const uploadedFiles = ['referenced.png', 'orphan.jpg', 'another-orphan.gif'];
+    const requiredFiles = new Set(['referenced.png']);
+
+    expect(identifyUnnecessaryFiles(uploadedFiles, requiredFiles)).toEqual([
+      'orphan.jpg',
+      'another-orphan.gif'
+    ]);
+  });
+});

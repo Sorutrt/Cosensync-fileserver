@@ -12,15 +12,18 @@ export default defineConfig({
   },
   reporter: 'html',
   
-  // グローバルセットアップとティアダウン
-  globalSetup: require.resolve('./tests/global-setup.ts'),
-  globalTeardown: require.resolve('./tests/global-teardown.ts'),
-  
   use: {
     trace: 'on-first-retry',
     ...devices['Desktop Chrome']
   },
-  
-  // ワーカー数を制限してサーバーの競合を避ける
-  workers: 3
+
+  webServer: {
+    command: 'npm run dev',
+    url: 'http://localhost:5050',
+    reuseExistingServer: false,
+    timeout: 10000
+  },
+
+  // API/GCテストは同じuploadsディレクトリを操作するため直列実行する
+  workers: 1
 });

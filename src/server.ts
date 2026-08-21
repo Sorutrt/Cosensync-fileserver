@@ -100,8 +100,16 @@ const backupUpload = multer({
  * @param {File} image - アップロードする画像ファイル（multipart/form-data）
  * @returns {Object} success - 成功フラグ、url - アクセス用URL、filename - 保存されたファイル名
  */
-app.post('/api/upload', upload.single('image'), (req, res) => {
-  try {
+app.post('/api/upload', (req, res) => {
+  upload.single('image')(req, res, (uploadError: unknown) => {
+    if (uploadError) {
+      console.warn('ファイルアップロードに失敗:', uploadError);
+      return res.status(400).json({
+        error: uploadError instanceof Error ? uploadError.message : 'ファイルのアップロードに失敗しました'
+      });
+    }
+
+    try {
     // ファイルの存在確認
     if (!req.file) {
       console.warn('ファイルアップロードリクエストにファイルが含まれていません');
@@ -119,13 +127,14 @@ app.post('/api/upload', upload.single('image'), (req, res) => {
       url: fullUrl,
       filename: req.file.filename
     });
-  } catch (error) {
-    console.error('アップロードエラー:', error);
-    res.status(500).json({
-      error: 'アップロードに失敗しました',
-      details: error instanceof Error ? error.message : '不明なエラー'
-    });
-  }
+    } catch (error) {
+      console.error('アップロードエラー:', error);
+      res.status(500).json({
+        error: 'アップロードに失敗しました',
+        details: error instanceof Error ? error.message : '不明なエラー'
+      });
+    }
+  });
 });
 
 /**

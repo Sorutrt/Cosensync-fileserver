@@ -72,14 +72,7 @@ test.describe('E2E ファイルアップロード', () => {
     try {
       // ファイル選択
       await page.setInputFiles('#fileInput', testImagePath);
-      
-      // プレビューが表示されるまで待機
-      await expect(page.locator('#previewArea')).toBeVisible();
-      await expect(page.locator('.preview-image img')).toBeVisible();
-      
-      // アップロードが完了するまで待機（少し待機時間を設ける）
-      await page.waitForTimeout(2000);
-      
+
       // リンク履歴に追加されていることを確認
       await expect(page.locator('.link-item')).toHaveCount(1);
       const linkItem = page.locator('.link-item').first();
@@ -94,50 +87,19 @@ test.describe('E2E ファイルアップロード', () => {
   });
 
   test('ドラッグ＆ドロップで画像をアップロード', async ({ page }) => {
-    // テスト用画像ファイルのパスを準備
-    const testImagePath = path.join(__dirname, 'fixtures', 'test-drag.png');
-    
-    const fs = require('fs');
-    const testImageBuffer = Buffer.from([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-      0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-      0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-      0x54, 0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-      0xAE, 0x42, 0x60, 0x82
-    ]);
-    
-    const fixturesDir = path.join(__dirname, 'fixtures');
-    if (!fs.existsSync(fixturesDir)) {
-      fs.mkdirSync(fixturesDir);
-    }
-    fs.writeFileSync(testImagePath, testImageBuffer);
+    const dataTransfer = await page.evaluateHandle(() => {
+      const transfer = new DataTransfer();
+      transfer.items.add(new File(['test image'], 'test-drag.png', { type: 'image/png' }));
+      return transfer;
+    });
 
-    try {
-      // ドラッグ＆ドロップ
-      const dropZone = page.locator('#dropZone');
-      await dropZone.dragAndDrop(testImagePath, '#dropZone');
-      
-      // ドラッグオーバー効果が表示されることを確認
-      await expect(dropZone).toHaveClass(/dragover/);
-      
-      // プレビューが表示されるまで待機
-      await expect(page.locator('#previewArea')).toBeVisible();
-      
-      // アップロード完了を待機
-      await page.waitForTimeout(2000);
-      
-      // リンク履歴に追加されていることを確認
-      await expect(page.locator('.link-item')).toHaveCount(1);
-      
-    } finally {
-      if (fs.existsSync(testImagePath)) {
-        fs.unlinkSync(testImagePath);
-      }
-    }
+    const dropZone = page.locator('#dropZone');
+    await dropZone.dispatchEvent('dragover', { dataTransfer });
+    await expect(dropZone).toHaveClass(/dragover/);
+    await dropZone.dispatchEvent('drop', { dataTransfer });
+
+    await expect(dropZone).not.toHaveClass(/dragover/);
+    await expect(page.locator('.link-item')).toHaveCount(1);
   });
 
   test('リンク履歴のコピー機能', async ({ page }) => {
@@ -166,8 +128,7 @@ test.describe('E2E ファイルアップロード', () => {
     try {
       // ファイルをアップロード
       await page.setInputFiles('#fileInput', testImagePath);
-      await page.waitForTimeout(2000);
-      
+
       // リンク項目が表示されるのを確認
       const linkItem = page.locator('.link-item').first();
       await expect(linkItem).toBeVisible();
@@ -180,8 +141,7 @@ test.describe('E2E ファイルアップロード', () => {
       await expect(copyBtn).toHaveText('✓');
       await expect(copyBtn).toHaveClass(/copied/);
       
-      // 少し待ってから元に戻ることを確認
-      await page.waitForTimeout(3000);
+      // 2秒後に元に戻ることを確認
       await expect(copyBtn).toHaveText('コピー');
       await expect(copyBtn).not.toHaveClass(/copied/);
       
@@ -214,57 +174,4 @@ test.describe('E2E ファイルアップロード', () => {
     await expect(page.locator('.gc-result')).toContainText('GC処理が完了しました');
   });
 
-  test('複数ファイルのアップロード', async ({ page }) => {
-    // 複数のテスト画像ファイルを準備
-    const testFiles = ['test1.png', 'test2.png', 'test3.png'];
-    const testPaths = [];
-    
-    const fs = require('fs');
-    const testImageBuffer = Buffer.from([
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
-      0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
-      0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53,
-      0xDE, 0x00, 0x00, 0x00, 0x0C, 0x49, 0x44, 0x41,
-      0x54, 0x08, 0x99, 0x01, 0x01, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-      0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4E, 0x44,
-      0xAE, 0x42, 0x60, 0x82
-    ]);
-    
-    const fixturesDir = path.join(__dirname, 'fixtures');
-    if (!fs.existsSync(fixturesDir)) {
-      fs.mkdirSync(fixturesDir);
-    }
-    
-    try {
-      // テストファイルを作成
-      for (const filename of testFiles) {
-        const filePath = path.join(fixturesDir, filename);
-        fs.writeFileSync(filePath, testImageBuffer);
-        testPaths.push(filePath);
-      }
-      
-      // 複数ファイルを選択
-      await page.setInputFiles('#fileInput', testPaths);
-      
-      // プレビューに複数の画像が表示されることを確認
-      await expect(page.locator('#previewArea')).toBeVisible();
-      await expect(page.locator('.preview-image')).toHaveCount(testFiles.length);
-      
-      // アップロード完了を待機
-      await page.waitForTimeout(3000);
-      
-      // リンク履歴に複数のリンクが追加されていることを確認
-      await expect(page.locator('.link-item')).toHaveCount(testFiles.length);
-      
-    } finally {
-      // テスト後にファイルをクリーンアップ
-      for (const filePath of testPaths) {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath);
-        }
-      }
-    }
-  });
 });

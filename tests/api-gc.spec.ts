@@ -10,6 +10,7 @@ import fs from 'fs';
 
 const BASE_URL = `http://localhost:${process.env.PORT || 5050}`;
 const TEST_UPLOADS_DIR = path.join(__dirname, '..', 'uploads');
+const GC_TEMP_DIR = path.join(TEST_UPLOADS_DIR, '.gc-tmp');
 const BACKUP_FILE_PATTERN = /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}\.[a-zA-Z0-9]+/g;
 
 function getBackupData(): Buffer {
@@ -115,11 +116,8 @@ test.describe('ガベージコレクションAPI', () => {
   });
 
   test('異常系：バックアップファイルなしでGC実行', async ({ request }) => {
-    const formData = new FormData();
-    // バックアップファイルを追加しない
-
     const response = await request.post(`${BASE_URL}/api/gc`, {
-      data: formData
+      multipart: {}
     });
 
     expect(response.status()).toBe(400);
@@ -247,10 +245,8 @@ test.describe('ガベージコレクションAPI', () => {
     const result = await response.json();
     expect(result.success).toBe(true);
 
-    // バックアップファイルがuploadsディレクトリに残っていないことを確認
-    //（サーバーが一時保存したバックアップファイルを削除したはず）
-    const uploadsFiles = fs.readdirSync(TEST_UPLOADS_DIR);
-    const backupFiles = uploadsFiles.filter(file => file.includes('backup') || file.includes('json'));
-    expect(backupFiles.length).toBe(0);
+    // サーバーが一時保存したバックアップファイルが.gc-tmpに残っていないことを確認
+    expect(fs.existsSync(GC_TEMP_DIR)).toBe(true);
+    expect(fs.readdirSync(GC_TEMP_DIR)).toEqual([]);
   });
 });

@@ -21,8 +21,6 @@ class FileUploader {
         this.fileSelectBtn = document.getElementById('fileSelectBtn');
         this.previewArea = document.getElementById('previewArea');
         this.previewImages = document.getElementById('previewImages');
-        this.uploadBtn = document.getElementById('uploadBtn');
-        this.cancelBtn = document.getElementById('cancelBtn');
         this.linkHistory = document.getElementById('linkHistory');
         this.gcFileInput = document.getElementById('gcFileInput');
         this.gcSelectBtn = document.getElementById('gcSelectBtn');
@@ -42,10 +40,6 @@ class FileUploader {
         this.dropZone.addEventListener('dragover', (e) => this.handleDragOver(e));
         this.dropZone.addEventListener('dragleave', (e) => this.handleDragLeave(e));
         this.dropZone.addEventListener('drop', (e) => this.handleDrop(e));
-
-        // アップロード・キャンセル
-        this.uploadBtn.addEventListener('click', () => this.uploadFiles());
-        this.cancelBtn.addEventListener('click', () => this.cancelUpload());
 
         // クリップボード貼り付け
         document.addEventListener('paste', (e) => this.handlePaste(e));
@@ -143,13 +137,6 @@ class FileUploader {
         this.previewArea.style.display = 'block';
     }
 
-    /**
-     * ファイルアップロード
-     */
-    async uploadFiles() {
-        if (this.selectedFiles.length === 0) return;
-        await this.uploadFilesSequential(this.selectedFiles);
-    }
 
     /**
      * 1ファイルをサーバーへアップロードし、生成URLを返す
@@ -188,10 +175,6 @@ class FileUploader {
     async uploadFilesSequential(files) {
         if (!files || files.length === 0) return;
 
-        this.uploadBtn.disabled = true;
-        const originalBtnText = this.uploadBtn.textContent;
-        this.uploadBtn.textContent = 'アップロード中...';
-
         const uploadedUrls = [];
         try {
             for (const file of files) {
@@ -210,8 +193,6 @@ class FileUploader {
             console.error('アップロードエラー:', error);
             this.showError('ファイルのアップロードに失敗しました。もう一度お試しください。');
         } finally {
-            this.uploadBtn.disabled = false;
-            this.uploadBtn.textContent = originalBtnText;
             this.cancelUpload();
         }
     }
