@@ -162,6 +162,9 @@ test.describe('E2E ファイルアップロード', () => {
     
     // バックアップファイルを選択
     await page.setInputFiles('#gcFileInput', backupPath);
+
+    // 選択したバックアップファイル名が表示されることを確認
+    await expect(page.locator('#gcSelectedFileName')).toHaveText('cosense-backup.json');
     
     // GC実行ボタンが表示されることを確認
     await expect(page.locator('#gcExecuteBtn')).toBeVisible();

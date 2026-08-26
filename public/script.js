@@ -24,6 +24,7 @@ class FileUploader {
         this.linkHistory = document.getElementById('linkHistory');
         this.gcFileInput = document.getElementById('gcFileInput');
         this.gcSelectBtn = document.getElementById('gcSelectBtn');
+        this.gcSelectedFileName = document.getElementById('gcSelectedFileName');
         this.gcExecuteBtn = document.getElementById('gcExecuteBtn');
         this.gcResult = document.getElementById('gcResult');
     }
@@ -327,6 +328,8 @@ class FileUploader {
      */
     handleGcFileSelect(files) {
         if (files.length > 0) {
+            this.gcSelectedFileName.textContent = files[0].name;
+            this.gcSelectedFileName.hidden = false;
             this.gcExecuteBtn.style.display = 'inline-block';
             this.gcResult.style.display = 'none';
         }

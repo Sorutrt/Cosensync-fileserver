@@ -289,9 +289,16 @@ header p {
 
 .gc-upload {
     display: flex;
+    flex-wrap: wrap;
     gap: 15px;
     align-items: center;
     margin-bottom: 20px;
+}
+
+.gc-selected-file-name {
+    color: #2c3e50;
+    font-size: 14px;
+    overflow-wrap: anywhere;
 }
 
 .gc-select-btn, .gc-execute-btn {
