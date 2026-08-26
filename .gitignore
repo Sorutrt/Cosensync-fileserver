@@ -1,6 +1,7 @@
 node_modules/
 dist/
 uploads/
+cosense-backup-example.json
 .env
 *.log
 .DS_Store
